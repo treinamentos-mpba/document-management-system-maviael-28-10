@@ -80,6 +80,34 @@ test('envia, lista e baixa documentos sem expor documentos de outro usuário', a
   assert.equal((await fs.readdir(storageDirectory)).length, 1);
 });
 
+test('preserva nomes de arquivo UTF-8 com caracteres acentuados', async () => {
+  const originalName = 'Autorização_220178.pdf';
+  const form = new FormData();
+  form.append('file', new Blob(['pdf de teste'], { type: 'application/pdf' }), originalName);
+
+  const response = await fetch(`${baseUrl}/upload`, {
+    method: 'POST',
+    headers: { 'X-User-Id': 'alice' },
+    body: form,
+  });
+
+  assert.equal(response.status, 201);
+  const document = await response.json();
+  assert.equal(document.originalName, originalName);
+  assert.equal(document.mimeType, 'application/pdf');
+
+  const downloadResponse = await fetch(`${baseUrl}/documents/${document.id}/download`, {
+    headers: { 'X-User-Id': 'alice' },
+  });
+  assert.equal(downloadResponse.status, 200);
+  assert.equal(downloadResponse.headers.get('content-type'), 'application/pdf');
+  assert.equal(
+    downloadResponse.headers.get('content-disposition'),
+    'attachment; filename="Autoriza__o_220178.pdf"; filename*=UTF-8\'\'Autoriza%C3%A7%C3%A3o_220178.pdf'
+  );
+  assert.equal(await downloadResponse.text(), 'pdf de teste');
+});
+
 test('rejeita usuário ausente e arquivo ausente', async () => {
   const noUserForm = new FormData();
   noUserForm.append('file', new Blob(['x']), 'x.txt');

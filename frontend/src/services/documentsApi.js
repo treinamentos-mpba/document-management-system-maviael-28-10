@@ -1,11 +1,15 @@
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 async function readError(response) {
+  const fallbackMessage = `Falha na operação (HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}).`;
+  const responseBody = await response.text();
+
   try {
-    const result = await response.json();
-    return result.error?.message || 'Não foi possível concluir a operação.';
+    const result = JSON.parse(responseBody);
+    return result.error?.message || fallbackMessage;
   } catch {
-    return 'Não foi possível concluir a operação.';
+    const detail = responseBody.trim().replace(/\s+/g, ' ').slice(0, 200);
+    return detail ? `${fallbackMessage} ${detail}` : fallbackMessage;
   }
 }
 
